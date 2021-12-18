@@ -19,9 +19,7 @@ import (
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
-	"github.com/yuin/goldmark/util"
 )
 
 type Renderer struct {
@@ -88,9 +86,13 @@ func (r *Renderer) renderItem(item *Item, absRoot string, ebook *epub.Epub) erro
 	}
 
 	linkSrcFunc := func(src string) string {
-		// Change link src if source is from local
+		// Change link src if source is a local file
 
 		if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
+			return src
+		}
+
+		if len(src) > 0 && src[0] == '#' {
 			return src
 		}
 
@@ -116,11 +118,9 @@ func (r *Renderer) renderItem(item *Item, absRoot string, ebook *epub.Epub) erro
 			extension.Footnote,
 		),
 		goldmark.WithRendererOptions(
-			renderer.WithNodeRenderers(
-				util.Prioritized(srcreplacer.New(imgSrcFunc, linkSrcFunc), 0),
-			),
 			html.WithHardWraps(),
 			html.WithXHTML(),
+			html.WithUnsafe(),
 		),
 	)
 
@@ -130,12 +130,16 @@ func (r *Renderer) renderItem(item *Item, absRoot string, ebook *epub.Epub) erro
 		return fmt.Errorf("Renderer.renderItem: %w", err)
 	}
 
-	html := string(buf.Bytes())
+	html, err := srcreplacer.ReplaceHTML(buf.Bytes(), linkSrcFunc, imgSrcFunc)
+	if err != nil {
+		return fmt.Errorf("Renderer.renderItem: %w", err)
+	}
+
 	title := fmt.Sprintf("%s %s", r.chapterNumbersToString(item.Number), item.Name)
 	internalFilename := r.hashFilename(absFilePath) + ".xhtml"
 
 	log.Println("Renderer.renderItem: Add", absFilePath, "to", internalFilename)
-	ebook.AddSection(html, title, internalFilename, "")
+	ebook.AddSection(string(html), title, internalFilename, "")
 
 	for _, subitem := range item.SubItems {
 		err := r.renderItem(subitem.Chapter, absRoot, ebook)
