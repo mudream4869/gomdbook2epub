@@ -5,7 +5,6 @@ package srcreplacer
 import (
 	"bytes"
 	"fmt"
-	"log"
 
 	"golang.org/x/net/html"
 )
@@ -59,8 +58,6 @@ func ReplaceHTML(rawHTML []byte, linkReplacer, imgReplacer func(string) string) 
 	if err != nil {
 		return nil, fmt.Errorf("scrreplacer.replaceHTML: %w", err)
 	}
-
-	log.Println(string(buf.Bytes()))
 
 	return buf.Bytes(), nil
 }
