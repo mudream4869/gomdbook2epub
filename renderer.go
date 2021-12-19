@@ -92,24 +92,32 @@ func (r *Renderer) renderItem(item *Item, absRoot string, ebook *epub.Epub) erro
 			return src
 		}
 
-		if len(src) > 0 && src[0] == '#' {
+		hashTagPos := strings.IndexRune(src, '#')
+		if hashTagPos == 0 {
 			return src
 		}
 
-		if !strings.HasSuffix(src, ".md") {
+		filename := src
+		hashTag := ""
+		if hashTagPos != -1 {
+			filename = src[:hashTagPos]
+			hashTag = src[hashTagPos:]
+		}
+
+		if !strings.HasSuffix(filename, ".md") {
 			log.Println("Renderer.run: [Warning] link to a none markdown local file:", src)
 			return src
 		}
 
-		if !path.IsAbs(src) {
-			src = path.Clean(path.Join(absFolderPath, src))
+		if !path.IsAbs(filename) {
+			filename = path.Clean(path.Join(absFolderPath, filename))
 		}
 
-		if !strings.HasPrefix(src, absFolderPath) {
-			log.Println("Renderer.run: [Warning] file not in mdbook src folder: ", src)
+		if !strings.HasPrefix(filename, absFolderPath) {
+			log.Println("Renderer.run: [Warning] file not in mdbook src folder: ", filename)
 		}
 
-		return r.hashFilename(src) + ".xhtml"
+		return r.hashFilename(filename) + ".xhtml" + hashTag
 	}
 
 	md := goldmark.New(
